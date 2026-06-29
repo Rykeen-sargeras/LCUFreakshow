@@ -233,9 +233,59 @@
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(240px,1fr));
     gap:26px;
-    max-width:980px;
+    max-width:100%;
     margin:0 auto;
   }
+  /* when the admin picks a fixed count, use it on wide screens... */
+  .acts.fixed-cols{
+    grid-template-columns:repeat(var(--cols, 5), minmax(0, 1fr));
+  }
+  /* ...but always step down gracefully on smaller screens */
+  @media (max-width:1000px){
+    .acts.fixed-cols{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+  }
+  @media (max-width:760px){
+    .acts.fixed-cols{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  }
+  @media (max-width:520px){
+    .acts.fixed-cols{ grid-template-columns:1fr; }
+  }
+
+  /* admin: choose how many freaks per row */
+  .layout-control{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    margin:0 auto 28px;
+    flex-wrap:wrap;
+  }
+  body.admin-mode .layout-control{ display:flex; }
+  .layout-control .layout-label{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    font-size:0.72rem;
+    color:var(--crimson);
+  }
+  .layout-control button{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:0.8rem;
+    min-width:42px;
+    padding:7px 12px;
+    border:2px solid var(--ink);
+    background:var(--paper-dark);
+    color:var(--ink);
+    cursor:pointer;
+    border-radius:3px;
+  }
+  .layout-control button:hover{ background:var(--gold-bright); }
+  .layout-control button.active{
+    background:var(--crimson);
+    color:var(--paper);
+  }
+
   .reveal-card{
     background:var(--paper-dark);
     border:2px solid var(--ink);
@@ -760,6 +810,13 @@
     <h2 class="section-title">The Main Attractions</h2>
     <p class="section-sub">Five rings. Five acts. Tap each one to reveal the freak within.</p>
     <div class="divider"></div>
+    <div class="layout-control" id="layoutControl">
+      <span class="layout-label">Per row:</span>
+      <button type="button" data-cols="auto">Auto</button>
+      <button type="button" data-cols="4">4</button>
+      <button type="button" data-cols="5">5</button>
+      <button type="button" data-cols="6">6</button>
+    </div>
     <div class="acts" id="actsContainer">
       <!-- rendered by JS from ACTS data -->
     </div>
@@ -901,6 +958,7 @@
 
   var ACTS = JSON.parse(JSON.stringify(DEFAULT_ACTS));
   var isAdmin = false;
+  var COLUMNS = null;   // null = Auto; otherwise 4, 5, or 6 (shared for everyone)
 
 /* ---------- rendering ---------- */
   function escapeHtml(str){
@@ -960,6 +1018,31 @@
       container.appendChild(card);
     });
     wireCardEvents();
+    applyLayout();
+  }
+
+  /* apply the chosen per-row count (shared via state) */
+  function applyLayout(){
+    var c = document.getElementById('actsContainer');
+    if(c){
+      if(COLUMNS){
+        c.style.setProperty('--cols', COLUMNS);
+        c.classList.add('fixed-cols');
+      } else {
+        c.style.removeProperty('--cols');
+        c.classList.remove('fixed-cols');
+      }
+    }
+    document.querySelectorAll('[data-cols]').forEach(function(b){
+      var v = b.getAttribute('data-cols');
+      b.classList.toggle('active', (COLUMNS ? String(COLUMNS) : 'auto') === v);
+    });
+  }
+
+  function setColumns(val){
+    COLUMNS = (val === 'auto') ? null : parseInt(val, 10);
+    applyLayout();
+    persistState();
   }
 
   function wireCardEvents(){
@@ -1283,12 +1366,13 @@
 
     var order = ACTS.map(function(act){ return act.id; });
 
-    return { overrides: overrides, added: added, removed: removed, order: order };
+    return { overrides: overrides, added: added, removed: removed, order: order, columns: COLUMNS };
   }
 
   function applyState(state){
     // start from the in-code defaults
     ACTS = JSON.parse(JSON.stringify(DEFAULT_ACTS));
+    COLUMNS = (state && state.columns) ? state.columns : null;
     if(!state){ return; }
 
     // drop deleted defaults
@@ -1456,6 +1540,10 @@
   }
 
   document.getElementById('addAttractionBtn').addEventListener('click', addAttraction);
+
+  document.querySelectorAll('[data-cols]').forEach(function(btn){
+    btn.addEventListener('click', function(){ setColumns(btn.getAttribute('data-cols')); });
+  });
 
 /* ---------- boot ---------- */
   loadActs();
