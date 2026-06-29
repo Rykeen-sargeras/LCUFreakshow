@@ -330,12 +330,6 @@
     margin:6px 0 10px;
     min-height:1.3em;
   }
-  .reveal-card:not(.is-revealed) h3 .name-text{ visibility:hidden; }
-  .reveal-card:not(.is-revealed) h3::after{
-    content:"??? ??????";
-    color:var(--ink);
-    opacity:0.5;
-  }
 
   .reveal-desc{
     margin:0;
@@ -377,6 +371,142 @@
   @media (prefers-reduced-motion: reduce){
     .reveal-photo-wrap img, .reveal-mask, .reveal-desc, .reveal-btn{ transition:none; }
   }
+
+  /* enlarge affordance, only on a revealed card */
+  .enlarge-hint{
+    position:absolute;
+    top:8px; left:8px;
+    z-index:5;
+    width:30px; height:30px;
+    border-radius:50%;
+    background:rgba(20,10,5,0.55);
+    color:var(--gold-bright);
+    border:1px solid var(--gold);
+    display:none;
+    align-items:center; justify-content:center;
+    font-size:0.9rem;
+    pointer-events:none;
+  }
+  .reveal-card.is-revealed .enlarge-hint{ display:flex; }
+  .reveal-card.is-revealed .reveal-photo-wrap{ cursor:zoom-in; }
+
+  /* ===== LIGHTBOX ===== */
+  .lightbox{
+    position:fixed; inset:0;
+    background:rgba(15,8,4,0.92);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:120;
+    padding:24px;
+  }
+  .lightbox.is-open{ display:flex; }
+  .lightbox img{
+    max-width:95vw;
+    max-height:90vh;
+    object-fit:contain;
+    filter:drop-shadow(0 8px 30px rgba(0,0,0,0.6));
+  }
+  .lightbox-close{
+    position:absolute;
+    top:18px; right:22px;
+    background:var(--crimson);
+    color:var(--paper);
+    border:2px solid var(--gold);
+    width:44px; height:44px;
+    border-radius:50%;
+    font-size:1.3rem;
+    cursor:pointer;
+    line-height:1;
+  }
+  .lightbox-caption{
+    position:absolute;
+    bottom:24px; left:0; right:0;
+    text-align:center;
+    font-family:'Alfa Slab One', serif;
+    color:var(--gold-bright);
+    font-size:1.1rem;
+    padding:0 20px;
+    text-shadow:2px 2px 0 var(--ink);
+  }
+
+  /* ===== ADD ATTRACTION / DELETE ===== */
+  .add-attraction-wrap{
+    max-width:980px;
+    margin:30px auto 0;
+    text-align:center;
+    display:none;
+  }
+  body.admin-mode .add-attraction-wrap{ display:block; }
+  .add-attraction-btn{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    font-weight:600;
+    font-size:0.9rem;
+    padding:14px 28px;
+    border:2px dashed var(--crimson);
+    background:var(--paper-dark);
+    color:var(--crimson-deep);
+    cursor:pointer;
+    border-radius:3px;
+  }
+  .add-attraction-btn:hover{ background:var(--gold-bright); }
+  .admin-delete-btn{
+    background:transparent;
+    color:var(--crimson);
+    border:2px solid var(--crimson);
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    font-size:0.72rem;
+    letter-spacing:0.06em;
+    padding:8px 12px;
+    cursor:pointer;
+    margin-top:4px;
+  }
+  .admin-delete-btn:hover{ background:var(--crimson); color:var(--paper); }
+
+  /* ===== REORDER CONTROLS ===== */
+  .admin-move{
+    position:absolute;
+    top:8px; left:8px;
+    z-index:6;
+    display:none;
+    gap:6px;
+  }
+  body.admin-mode .admin-move{ display:flex; }
+  .admin-move button{
+    width:30px; height:30px;
+    border-radius:50%;
+    border:2px solid var(--ink);
+    background:var(--paper);
+    color:var(--ink);
+    font-size:0.8rem;
+    line-height:1;
+    cursor:pointer;
+    box-shadow:2px 2px 0 var(--ink);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .admin-move button:hover{ background:var(--gold-bright); }
+  .admin-move button:disabled{ opacity:0.35; cursor:not-allowed; box-shadow:none; }
+
+  .drag-handle{
+    position:absolute;
+    bottom:8px; right:8px;
+    z-index:6;
+    display:none;
+    align-items:center; justify-content:center;
+    width:30px; height:30px;
+    border-radius:6px;
+    border:2px solid var(--ink);
+    background:var(--paper);
+    color:var(--ink);
+    font-size:1rem;
+    cursor:grab;
+    box-shadow:2px 2px 0 var(--ink);
+  }
+  body.admin-mode .drag-handle{ display:flex; }
+  body.admin-mode .reveal-card.dragging{ opacity:0.45; }
+  body.admin-mode .reveal-card.drag-over{ outline:3px dashed var(--crimson); outline-offset:2px; }
 
   /* ===== ADMIN EDIT CONTROLS ===== */
   .admin-edit-btn{
@@ -633,6 +763,9 @@
     <div class="acts" id="actsContainer">
       <!-- rendered by JS from ACTS data -->
     </div>
+    <div class="add-attraction-wrap">
+      <button class="add-attraction-btn" id="addAttractionBtn" type="button">＋ Add Attraction</button>
+    </div>
   </section>
 
   <div class="banner">
@@ -668,6 +801,13 @@
     <div class="admin-status" id="adminStatus"></div>
   </div>
 
+</div>
+
+<!-- ===== IMAGE LIGHTBOX ===== -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose" type="button" aria-label="Close">&times;</button>
+  <img id="lightboxImg" src="" alt="">
+  <div class="lightbox-caption" id="lightboxCaption"></div>
 </div>
 
 <!-- ===== LOGIN MODAL ===== -->
@@ -802,22 +942,30 @@
       card.setAttribute('data-card', '');
       card.setAttribute('data-idx', idx);
 
+      var ringLabel = 'Ring No. ' + (idx + 1);  // auto-numbered, no gaps
+
       card.innerHTML =
-        '<div class="reveal-photo-wrap">' +
+        '<div class="reveal-photo-wrap" data-photo-wrap>' +
           '<img src="' + act.image + '" alt="" data-photo>' +
+          '<div class="enlarge-hint" aria-hidden="true">\u26F6</div>' +
           '<div class="reveal-mask">' +
             '<span class="reveal-qmark">?</span>' +
             '<span class="reveal-hint">Click to Reveal</span>' +
           '</div>' +
         '</div>' +
         '<div class="reveal-body">' +
-          '<span class="num">' + escapeHtml(act.num) + '</span>' +
+          '<span class="num">' + escapeHtml(ringLabel) + '</span>' +
           '<h3><span class="name-text">' + escapeHtml(act.name) + '</span></h3>' +
           '<p class="reveal-desc">' + escapeHtml(act.bio) + '</p>' +
           '<button class="reveal-btn" type="button" data-toggle>Reveal</button>' +
         '</div>' +
         (isAdmin ?
           '<button class="admin-edit-btn" type="button" data-edit title="Edit this act">\u270E</button>' +
+          '<div class="admin-move">' +
+            '<button type="button" data-move="-1" title="Move earlier"' + (idx === 0 ? ' disabled' : '') + '>\u25C0</button>' +
+            '<button type="button" data-move="1" title="Move later"' + (idx === ACTS.length - 1 ? ' disabled' : '') + '>\u25B6</button>' +
+          '</div>' +
+          '<div class="drag-handle" title="Drag to reorder" draggable="true">\u2630</div>' +
           '<div class="admin-edit-panel">' +
             '<label>Display Name</label>' +
             '<input type="text" data-field="name" value="' + escapeHtml(act.name) + '">' +
@@ -829,6 +977,7 @@
               '<button class="admin-cancel-btn" type="button" data-cancel-edit>Cancel</button>' +
               '<button class="admin-save-btn" type="button" data-save-edit>Save</button>' +
             '</div>' +
+            '<button class="admin-delete-btn" type="button" data-delete>Delete this attraction</button>' +
           '</div>'
         : '');
 
@@ -840,6 +989,7 @@
   function wireCardEvents(){
     document.querySelectorAll('[data-card]').forEach(function(card){
       var btn = card.querySelector('[data-toggle]');
+      var idx = parseInt(card.getAttribute('data-idx'), 10);
       function toggleReveal(){
         if(card.classList.contains('editing')) return;
         var revealed = card.classList.toggle('is-revealed');
@@ -847,8 +997,24 @@
         btn.setAttribute('aria-pressed', revealed ? 'true' : 'false');
       }
       btn.addEventListener('click', function(e){ e.stopPropagation(); toggleReveal(); });
+
+      // Photo: if the act is revealed, click enlarges it; otherwise it reveals.
+      var photoWrap = card.querySelector('[data-photo-wrap]');
+      if(photoWrap){
+        photoWrap.addEventListener('click', function(e){
+          if(card.classList.contains('editing')) return;
+          if(card.classList.contains('is-revealed')){
+            e.stopPropagation();
+            openLightbox(ACTS[idx].image, ACTS[idx].name);
+          } else {
+            toggleReveal();
+          }
+        });
+      }
+
+      // Clicks elsewhere on the card toggle reveal (but not on admin controls).
       card.addEventListener('click', function(e){
-        if(e.target.closest('.admin-edit-btn') || e.target.closest('.admin-edit-panel')) return;
+        if(e.target.closest('.admin-edit-btn') || e.target.closest('.admin-edit-panel') || e.target.closest('[data-photo-wrap]')) return;
         toggleReveal();
       });
 
@@ -873,7 +1039,116 @@
           saveCardEdits(card);
         });
       }
+      var deleteBtn = card.querySelector('[data-delete]');
+      if(deleteBtn){
+        deleteBtn.addEventListener('click', function(e){
+          e.stopPropagation();
+          if(confirm('Delete "' + ACTS[idx].name + '"? This cannot be undone.')){
+            deleteAct(idx);
+          }
+        });
+      }
+
+      // move-earlier / move-later buttons
+      card.querySelectorAll('[data-move]').forEach(function(mb){
+        mb.addEventListener('click', function(e){
+          e.stopPropagation();
+          moveAct(idx, parseInt(mb.getAttribute('data-move'), 10));
+        });
+      });
+
+      // drag-and-drop reordering (admin)
+      var handle = card.querySelector('.drag-handle');
+      if(handle){
+        handle.addEventListener('dragstart', function(e){
+          dragFromIdx = idx;
+          card.classList.add('dragging');
+          if(e.dataTransfer){ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(idx)); }
+        });
+        handle.addEventListener('dragend', function(){
+          card.classList.remove('dragging');
+          document.querySelectorAll('.reveal-card.drag-over').forEach(function(c){ c.classList.remove('drag-over'); });
+        });
+      }
+      card.addEventListener('dragover', function(e){
+        if(dragFromIdx === null) return;
+        e.preventDefault();
+        if(e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        card.classList.add('drag-over');
+      });
+      card.addEventListener('dragleave', function(){ card.classList.remove('drag-over'); });
+      card.addEventListener('drop', function(e){
+        if(dragFromIdx === null) return;
+        e.preventDefault();
+        card.classList.remove('drag-over');
+        reorderAct(dragFromIdx, idx);
+        dragFromIdx = null;
+      });
     });
+  }
+
+  var dragFromIdx = null;
+
+  function moveAct(idx, dir){
+    var target = idx + dir;
+    if(target < 0 || target >= ACTS.length) return;
+    var tmp = ACTS[idx];
+    ACTS[idx] = ACTS[target];
+    ACTS[target] = tmp;
+    persistState();
+    renderActs();
+  }
+
+  function reorderAct(from, to){
+    if(from === to || from < 0 || to < 0 || from >= ACTS.length || to >= ACTS.length) return;
+    var moved = ACTS.splice(from, 1)[0];
+    ACTS.splice(to, 0, moved);
+    persistState();
+    renderActs();
+  }
+
+/* ---------- lightbox ---------- */
+  var lightbox = document.getElementById('lightbox');
+  var lightboxImg = document.getElementById('lightboxImg');
+  var lightboxCaption = document.getElementById('lightboxCaption');
+  function openLightbox(src, caption){
+    lightboxImg.src = src;
+    lightboxCaption.textContent = caption || "";
+    lightbox.classList.add('is-open');
+  }
+  function closeLightbox(){
+    lightbox.classList.remove('is-open');
+    lightboxImg.src = "";
+  }
+  document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+  lightbox.addEventListener('click', function(e){ if(e.target === lightbox) closeLightbox(); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeLightbox(); });
+
+/* ---------- add / delete attractions ---------- */
+  function addAttraction(){
+    var newAct = {
+      id: 'ring_' + Date.now(),
+      name: 'New Attraction',
+      bio: 'Write this act\u2019s tragic backstory here.',
+      image: 'https://placehold.co/600x800/5c1414/d9a73b?text=%3F',
+      isCustom: true
+    };
+    ACTS.push(newAct);
+    persistState();
+    renderActs();
+    // open the new card straight into edit mode
+    var cards = document.querySelectorAll('[data-card]');
+    var last = cards[cards.length - 1];
+    if(last){
+      last.classList.add('editing');
+      last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function deleteAct(idx){
+    ACTS.splice(idx, 1);
+    persistState();
+    renderActs();
   }
 
   function saveCardEdits(card){
@@ -916,7 +1191,7 @@
 
     function finishSave(){
       if(saveBtn){ saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
-      persistOverrides();
+      persistState();
       renderActs();
     }
   }
@@ -1011,54 +1286,103 @@
   }
 
 /* ---------- persistence: overrides only (keeps synced data tiny) ----------- */
-  /* We never sync the big embedded default images. We only sync an "overrides"
-     object: per-act { name?, bio?, image? } where image is a Storage URL.
-     Defaults always come from DEFAULT_ACTS in this file. This keeps the
-     Firestore document well under its 1 MB limit no matter what. */
-  function buildOverrides(){
-    var ov = {};
-    ACTS.forEach(function(act){
-      var def = DEFAULT_ACTS.filter(function(d){ return d.id === act.id; })[0] || {};
-      var o = {};
-      if(act.name !== def.name) o.name = act.name;
-      if(act.bio !== def.bio) o.bio = act.bio;
-      if(act.image !== def.image) o.image = act.image;
-      if(Object.keys(o).length) ov[act.id] = o;
-    });
-    return ov;
+  /* We never sync the big embedded default images. The synced payload holds:
+       overrides : per-default-act { name?, bio?, image? } (image = Storage URL)
+       added     : full custom acts you created (image = Storage URL or placeholder)
+       removed   : ids of default acts you deleted
+     Defaults always come from DEFAULT_ACTS in this file, so the synced
+     document stays tiny and well under Firestore's 1 MB limit. */
+  function isDefaultId(id){
+    return DEFAULT_ACTS.some(function(d){ return d.id === id; });
   }
 
-  function applyOverrides(ov){
+  function buildState(){
+    var overrides = {};
+    var added = [];
+    var presentDefaultIds = {};
+
+    ACTS.forEach(function(act){
+      if(isDefaultId(act.id)){
+        presentDefaultIds[act.id] = true;
+        var def = DEFAULT_ACTS.filter(function(d){ return d.id === act.id; })[0];
+        var o = {};
+        if(act.name !== def.name) o.name = act.name;
+        if(act.bio !== def.bio) o.bio = act.bio;
+        if(act.image !== def.image) o.image = act.image;
+        if(Object.keys(o).length) overrides[act.id] = o;
+      } else {
+        added.push({ id: act.id, name: act.name, bio: act.bio, image: act.image, isCustom: true });
+      }
+    });
+
+    var removed = DEFAULT_ACTS
+      .filter(function(d){ return !presentDefaultIds[d.id]; })
+      .map(function(d){ return d.id; });
+
+    var order = ACTS.map(function(act){ return act.id; });
+
+    return { overrides: overrides, added: added, removed: removed, order: order };
+  }
+
+  function applyState(state){
+    // start from the in-code defaults
     ACTS = JSON.parse(JSON.stringify(DEFAULT_ACTS));
-    if(!ov) return;
-    ACTS.forEach(function(act){
-      var o = ov[act.id];
-      if(!o) return;
-      if(o.name) act.name = o.name;
-      if(o.bio) act.bio = o.bio;
-      if(o.image) act.image = o.image;
-    });
+    if(!state){ return; }
+
+    // drop deleted defaults
+    if(state.removed && state.removed.length){
+      ACTS = ACTS.filter(function(act){ return state.removed.indexOf(act.id) === -1; });
+    }
+    // apply text/photo overrides to remaining defaults
+    if(state.overrides){
+      ACTS.forEach(function(act){
+        var o = state.overrides[act.id];
+        if(!o) return;
+        if(o.name) act.name = o.name;
+        if(o.bio) act.bio = o.bio;
+        if(o.image) act.image = o.image;
+      });
+    }
+    // append custom acts
+    if(state.added && state.added.length){
+      state.added.forEach(function(a){
+        ACTS.push({ id: a.id, name: a.name, bio: a.bio, image: a.image, isCustom: true });
+      });
+    }
+
+    // re-apply the saved lineup order
+    if(state.order && state.order.length){
+      var byId = {};
+      ACTS.forEach(function(act){ byId[act.id] = act; });
+      var ordered = [];
+      state.order.forEach(function(id){
+        if(byId[id]){ ordered.push(byId[id]); delete byId[id]; }
+      });
+      // anything not listed in order (e.g. brand-new) goes to the end
+      ACTS.forEach(function(act){ if(byId[act.id]) ordered.push(act); });
+      ACTS = ordered;
+    }
   }
 
-  function persistOverrides(){
-    var ov = buildOverrides();
+  function persistState(){
+    var state = buildState();
     if(firebaseReady && db){
       db.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC)
-        .set({ data: ov, updatedAt: Date.now() })
+        .set({ data: state, updatedAt: Date.now() })
         .then(function(){ setAdminStatus('Saved \u2014 now live for every visitor.'); })
         .catch(function(err){
           console.error(err);
-          saveLocal(ov);
+          saveLocal(state);
           setAdminStatus('Could not reach the shared database. Saved to this browser only.');
         });
     } else {
-      saveLocal(ov);
+      saveLocal(state);
       setAdminStatus('Saved to this browser only (no shared database connected yet).');
     }
   }
 
-  function saveLocal(ov){
-    try{ localStorage.setItem('lcu_overrides', JSON.stringify(ov)); }
+  function saveLocal(state){
+    try{ localStorage.setItem('lcu_state', JSON.stringify(state)); }
     catch(e){ console.warn('localStorage full or unavailable', e); }
   }
 
@@ -1068,7 +1392,7 @@
       // updates appear without a refresh.
       db.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC)
         .onSnapshot(function(docSnap){
-          applyOverrides(docSnap.exists ? docSnap.data().data : null);
+          applyState(docSnap.exists ? docSnap.data().data : null);
           // Don't yank a panel out from under the admin mid-edit.
           if(!document.querySelector('.reveal-card.editing')){
             renderActs();
@@ -1086,9 +1410,9 @@
   }
 
   function loadFromLocalStorage(){
-    var saved = localStorage.getItem('lcu_overrides');
+    var saved = localStorage.getItem('lcu_state');
     if(saved){
-      try{ applyOverrides(JSON.parse(saved)); }catch(e){ /* keep defaults */ }
+      try{ applyState(JSON.parse(saved)); }catch(e){ /* keep defaults */ }
     }
   }
 
@@ -1116,6 +1440,7 @@
   adminLoginLink.addEventListener('click', function(){
     if(isAdmin){
       isAdmin = false;
+      document.body.classList.remove('admin-mode');
       adminLoginLink.textContent = "Staff Login";
       setAdminStatus("");
       renderActs();
@@ -1132,6 +1457,7 @@
   function attemptLogin(){
     if(loginUser.value === ADMIN_USERNAME && loginPass.value === ADMIN_PASSWORD){
       isAdmin = true;
+      document.body.classList.add('admin-mode');
       adminLoginLink.textContent = "Log Out (Staff)";
       closeLogin();
       if(!firebaseConfigured()){
@@ -1144,6 +1470,8 @@
       loginError.classList.add('show');
     }
   }
+
+  document.getElementById('addAttractionBtn').addEventListener('click', addAttraction);
 
 /* ---------- boot ---------- */
   function initFirebase(){
